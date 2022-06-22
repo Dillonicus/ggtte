@@ -80,7 +80,7 @@ ggsurvplot(
 )
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-3-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-3-1.png" width="60%" />
 
 The **survminer** package also allows us to add a table with the number at risk, number of events/censored observations, and cumulative number of events/censored observations at specific timepoints:
 
@@ -93,7 +93,7 @@ ggsurvplot(
 )
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-4-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-4-1.png" width="60%" />
 
 
 Suppose that we're interested in evaluating not just recurrence-free survival but also overall survival in each study arm. To do this with the `survival` package and base `R`, we could do the following:
@@ -105,7 +105,7 @@ fit2 <- survfit(Surv(time, status) ~ rx + etype, data = df)
 plot(fit2)
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-5-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-5-1.png" width="60%" />
 
 ```r
 
@@ -166,7 +166,7 @@ ggsurvplot(
   )
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-6-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-6-1.png" width="60%" />
 
 Neither of these outputs are very appealing - things are getting way too crowded! We can solve a portion of this problem by plotting each set of survival curves in separate panels according to differentiation type. **survminer** does this by taking advantage of **ggplot2** facets:
 
@@ -180,7 +180,7 @@ ggsurvplot_facet(
   )
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-7-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-7-1.png" width="60%" />
 
 Notice, though, that with this method, we cannot automatically add risk tables below each panel. To do this, we have to manually create and combine the plots. Using the `arrange_ggsurvplots()` function helps, but there's no easy way to customize the plots after the fact. Notice also, that there are duplicated legends and axis titles that make the plot look cluttered.
 
@@ -195,7 +195,7 @@ plot_death <- ggsurvplot(fit_death, censor = FALSE, risk.table = TRUE)
 arrange_ggsurvplots(x = list(plot_recurrence, plot_death), nrow = 1)
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-8-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-8-1.png" width="60%" />
 
 We can also arrange the plots manually using other packages like `patchwork` or `cowplot`. Each can roughly replicate `arrange_ggsurvplots` but we still have issues with customization and clutter.
 
@@ -210,7 +210,7 @@ plot_death$plot +
   theme(legend.position = "bottom")
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-9-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-9-1.png" width="60%" />
 
 
 ```r
@@ -226,7 +226,7 @@ plot_grid(
 )
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-10-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-10-1.png" width="60%" />
 
 **ggtte** aims to solve these issues. 
 
@@ -259,7 +259,7 @@ ggtte_plot <- ggtte_plot +
 ggtte_plot
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-12-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-12-1.png" width="60%" />
 
 We can also create multiple panel plots easily while preserving the risk tables using **ggplot2**'s faceting functions, `facet_wrap()` and `facet_grid()`.
 
@@ -270,7 +270,7 @@ ggtte_plot %+%
   facet_wrap(vars(etype), nrow = 1)
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-13-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-13-1.png" width="60%" />
 
 
 ```r
@@ -279,7 +279,7 @@ ggtte_plot %+%
   facet_grid(cols = vars(etype))
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-14-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-14-1.png" width="60%" />
 
 And we can facet by multiple variables:
 
@@ -290,7 +290,7 @@ ggtte_plot %+%
   facet_grid(cols = vars(etype), rows = vars(sex))
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-15-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-15-1.png" width="60%" />
 
 Updating the theme of plots is also easy:
 
@@ -310,5 +310,5 @@ ggtte_plot %+% df +
   theme_custom
 ```
 
-<img src="ggtte_basics_files/figure-html/unnamed-chunk-16-1.png" width="60%" />
+<img src="man/readme-figures/unnamed-chunk-16-1.png" width="60%" />
 
