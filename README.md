@@ -1,20 +1,3 @@
----
-title: "ggtte walkthrough"
-author: "Dillon Corrigan"
-date: "22 June 2022"
-output: 
-  rmarkdown::html_vignette:
-    keep_md: yes
-vignette: >
-  %\VignetteIndexEntry{ggtte walkthrough}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-
-
-
-
 # ggtte
 
 The **ggtte** package was developed to extend **ggplot2** to more flexibly create graphics for time-to-event analyses. In contrast to other **R** packages, **ggtte** preserves the familiar **ggplot2** style API with tidy data.
