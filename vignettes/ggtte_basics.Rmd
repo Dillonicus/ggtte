@@ -1,0 +1,236 @@
+---
+title: "ggtte walkthrough"
+author: "Dillon Corrigan"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ggtte walkthrough}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr_setup, include = FALSE, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  cache = FALSE,
+  echo = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 10,
+  out.width = '60%'
+)
+```
+
+```{r setup, echo = FALSE}
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(survival)
+library(survminer)
+```
+
+# ggtte
+
+The **ggtte** package was developed to extend **ggplot2** to more flexibly create graphics for time-to-event analyses. In contrast to other **R** packages, **ggtte** preserves the familiar **ggplot2** style API with tidy data.
+
+# Motivation
+
+Let's look at a simple example using the `colon` dataset included in the **survival** package. This dataset contains survival data for patients with stage B/C colon cancer from a well-known trial of adjuvant chemotherapy. Patients were randomized to receive one of three treatment conditions:  
+
+- Observation (no treatment);  
+- Levamisole; and  
+- Levamisole + 5FU.  
+
+
+Suppose we're interested in the relationship between the treatment strategies and time to death. One approach to this question is to perform a Kaplan-Meier analysis, plotting a survival curve for each intervention.
+
+To do this using the **survival** package and base **R** we would do the following:
+
+```{r}
+
+# copy data from survival package
+df <- survival::colon
+
+# clean up data, label factors
+df <- df %>%
+  mutate(
+    sex = factor(sex, levels = c(0, 1), labels = c("Female", "Male")),
+    differ = factor(differ, levels = c(1, 2, 3), labels = c("Well", "Moderate", "Poor")),
+    node4 = factor(node4, levels = c(0, 1), labels = c("\u22644", ">4")),
+    etype = factor(etype, levels = c(1, 2), labels = c("Recurrence", "Death"))
+  )
+
+# estimate overall survival curves by treatment group
+fit1 <- survfit(formula = Surv(time = time, event = status) ~ rx, data = df %>% filter(etype == "Death"))
+
+# plot the curves
+plot(fit1)
+```
+
+We might also be interested in the number of individuals at risk and the number of events at specific follow-up timepoints:
+
+```{r}
+# get information about survival curves at specific timepoints
+summary(fit1, times = seq(0, 1500, by = 500))
+```
+
+As is clearly evident, this output is not the most visually compelling way to portray the results. Luckily, we can leverage the extreme flexibility afforded by **ggplot2** by using the **survminer** package to plot Kaplan-Meier curves:
+
+```{r}
+ggsurvplot(
+  fit = fit1,
+  censor = FALSE
+)
+```
+
+The **survminer** package also allows us to add a table with the number at risk, number of events/censored observations, and cumulative number of events/censored observations at specific timepoints:
+
+```{r}
+ggsurvplot(
+  fit = fit1,
+  censor = FALSE,
+  risk.table = TRUE
+)
+```
+
+
+Suppose that we're interested in evaluating not just recurrence-free survival but also overall survival in each study arm. To do this with the `survival` package and base `R`, we could do the following:
+
+```{r}
+fit2 <- survfit(Surv(time, status) ~ rx + etype, data = df)
+
+plot(fit2)
+
+summary(fit2, times = seq(0, 1500, by = 500))
+```
+
+Or with **survminer**:
+
+```{r}
+ggsurvplot(
+  fit = fit2,
+  censor = FALSE,
+  risk.table = TRUE
+  )
+```
+
+Neither of these outputs are very appealing - things are getting way too crowded! We can solve a portion of this problem by plotting each set of survival curves in separate panels according to differentiation type. **survminer** does this by taking advantage of **ggplot2** facets:
+
+```{r}
+ggsurvplot_facet(
+  fit = fit2,
+  data = df,
+  facet.by = "etype",
+  censor = FALSE
+  )
+```
+
+Notice, though, that with this method, we cannot automatically add risk tables below each panel. To do this, we have to manually create and combine the plots. Using the `arrange_ggsurvplots()` function helps, but there's no easy way to customize the plots after the fact. Notice also, that there are duplicated legends and axis titles that make the plot look cluttered.
+
+```{r}
+fit_recurrence <- survfit(Surv(time, status) ~ rx, data = df %>% filter(etype == "Recurrence"))
+fit_death <- survfit(Surv(time, status) ~ rx, data = df %>% filter(etype == "Death"))
+
+plot_recurrence <- ggsurvplot(fit_recurrence, censor = FALSE, risk.table = TRUE)
+plot_death <- ggsurvplot(fit_death, censor = FALSE, risk.table = TRUE)
+
+arrange_ggsurvplots(x = list(plot_recurrence, plot_death), nrow = 1)
+```
+
+We can also arrange the plots manually using other packages like `patchwork` or `cowplot`. Each can roughly replicate `arrange_ggsurvplots` but we still have issues with customization and clutter.
+
+```{r}
+library(patchwork)
+plot_death$plot + 
+  plot_recurrence$plot + 
+  plot_death$table + 
+  plot_recurrence$table + 
+  plot_layout(nrow = 2, ncol = 2, guides = "collect", heights = c(0.7, 0.3)) & 
+  theme(legend.position = "bottom")
+```
+
+```{r}
+library(cowplot)
+plot_grid(
+  plot_death$plot,
+  plot_recurrence$plot,
+  plot_death$table,
+  plot_recurrence$table,
+  align = "hv", 
+  axis = "lr",
+  rel_heights = c(0.7, 0.3)
+)
+```
+
+**ggtte** aims to solve these issues. 
+
+# Usage
+
+**ggtte** is simple to use if you are familiar with **ggplot2**. The `geom_km()` function calculates and plots Kaplan-Meier curves, requiring the `x` and `status` aesthetics (typically for the time and event status, respectively). The `geom_risktable()` function adds a risk table, requiring a `y` aesthetic, which will typically be the grouping variable of interest:
+
+```{r}
+library(ggtte)
+
+ggtte_plot <- ggplot(
+  data = df %>% filter(etype == "Death"), 
+  aes(x = time, status = status, colour = rx)
+  ) +
+  geom_km(na.rm = TRUE) + 
+  geom_risktable(aes(y = rx), na.rm = TRUE) +
+  labs(x = "Time (Days)", y = "Survival") 
+
+```
+
+Because the y-axis for the survival curve panel is continuous and the y-axis for the risk table is discrete, we have to specify these explicitly, using the `scale_y_continuous()` function for the survival curves and the special `scale_tte_y_discrete()` function for the risk table.
+
+```{r}
+
+ggtte_plot <- ggtte_plot + 
+  scale_y_continuous(labels = scales::label_percent()) + # use percent labels
+  scale_tte_y_discrete()
+
+ggtte_plot
+```
+
+We can also create multiple panel plots easily while preserving the risk tables using **ggplot2**'s faceting functions, `facet_wrap()` and `facet_grid()`.
+
+```{r}
+ggtte_plot %+% 
+  df + # update dataset for plots
+  facet_wrap(vars(etype), nrow = 1)
+```
+
+```{r}
+ggtte_plot %+% 
+  df + # update dataset for plots
+  facet_grid(cols = vars(etype))
+```
+
+And we can facet by multiple variables:
+
+```{r}
+ggtte_plot %+% 
+  df + # update dataset for plots
+  facet_grid(cols = vars(etype), rows = vars(sex))
+```
+
+Updating the theme of plots is also easy:
+
+```{r}
+theme_custom <- theme(
+  panel.background = element_rect(fill = NA),
+  panel.border = element_rect(color = "black", fill = NA),
+  panel.grid.major.y = element_line(color = "grey92", linetype = "dashed"),
+  strip.placement = "outside",
+  strip.background = element_rect(fill = NA),
+  strip.text = element_text(size = 14),
+  legend.position = "bottom", legend.key = element_rect(fill = NA))
+
+ggtte_plot %+% df +  
+  facet_grid(cols = vars(etype), rows = vars(sex)) +
+  theme_custom
+
+```
+
