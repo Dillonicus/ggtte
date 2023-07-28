@@ -36,7 +36,8 @@ fit1 <- survfit(formula = Surv(time = time, event = status) ~ rx, data = df %>% 
 # plot the curves
 plot(fit1)
 ```
-![image 1](man/readme-figures/unnamed-chunk-1-1.png)
+
+![image 1](./man/readme-figures/unnamed-chunk-1-1.png)
 <img src="man/readme-figures/unnamed-chunk-1-1.png?raw=true" width="60%" />
 
 We might also be interested in the number of individuals at risk and the number of events at specific follow-up timepoints:
